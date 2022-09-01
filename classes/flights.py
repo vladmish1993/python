@@ -7,9 +7,11 @@ from functions import *
 
 class FlightClass:
     def __init__(self, cities_from=List[str], max_return_price=100, skipped_countries=List[str], adding_price=Dict,
-                 month_cnt=1, log=True):
+                 month_cnt=1, trip_length=None, log=True):
 
-        # Connect to the database
+        if trip_length is None:
+            trip_length = [2, 4]
+
         self.connection = pymysql.connect(host='localhost',
                                           user='root',
                                           password='',
@@ -20,6 +22,7 @@ class FlightClass:
         self.skipped_countries = skipped_countries
         self.adding_price = adding_price
         self.month_cnt = month_cnt
+        self.trip_length = trip_length
         self.log = log
 
         self.cities_from_ids = []
@@ -116,7 +119,7 @@ class FlightClass:
             for flight_date_time in self.available_flight["FROM"]:
                 for flight_data in self.available_flight["FROM"][flight_date_time]:
                     ar_cheapest_return = find_return_flight(flight_date_time, flight_data["TO"],
-                                                            self.available_flight["TO"], [2, 4])
+                                                            self.available_flight["TO"], self.trip_length)
 
                     if ar_cheapest_return:
                         sum_price = flight_data["PRICE"] + ar_cheapest_return["PRICE"]

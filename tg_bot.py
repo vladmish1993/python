@@ -32,6 +32,14 @@ flight_command = "/find_tickets"
 wait_answer = defaultdict(lambda: defaultdict(list))
 
 
+def send_message(text, chat_id):
+    payload["text"] = text
+    payload["chat_id"] = chat_id
+    response = requests.post(url_send_mess, json=payload, headers=headers)
+    if IS_LOG:
+        print_to_file("Send message", response.text)
+
+
 def get_messages(url):
     try:
         result = requests.get(url)
@@ -77,42 +85,54 @@ def get_rate():
         print('requests_error')
 
 
-def get_flights(airports_str=None):
+def get_flights(airports_str=None, trip_range_str=None):
     cities_from = []
     if airports_str:
         airports = airports_str.split(',')
         for airport in airports:
             cities_from.append(airport.upper().strip())
 
-    # skip Great Britain and Ireland
-    if SKIP_GB_IE:
-        skipped_countries = ["GB", "IE"]
+    if cities_from:
+        # skip Great Britain and Ireland
+        if SKIP_GB_IE:
+            skipped_countries = ["GB", "IE"]
+        else:
+            skipped_countries = []
+
+        # Bus from/to city
+        # adding_price = {'DUB': 10}
+        adding_price = {}
+
+        max_return_price = MAX_RETURN_PRICE
+        month_cnt = MONTH_CNT
+
+        # trip length
+        trip_length = []
+        if trip_range_str:
+            trip_range = trip_range_str.split('-')
+            if type(trip_range) == list:
+                for trip_range_day in trip_range:
+                    trip_length.append(int(trip_range_day.strip()))
+
+        # Get the cheapest flights
+        ob_ac = FlightClass(cities_from, max_return_price, skipped_countries, adding_price, month_cnt, trip_length,
+                            True)
+        cheapest_flights = ob_ac.get_cheapest_flights()
+
+        if cheapest_flights:
+            ar_return_html = []
+            for price in cheapest_flights:
+                flight_data = cheapest_flights[price][0]
+                ar_return_html.append(
+                    f'From <b>{flight_data["FROM"]["FROM_TEXT"]}</b> to <b>{flight_data["FROM"]["TO_TEXT"]}</b> at {get_formatted_date(flight_data["FROM"]["DATE_TIME"])} via {flight_data["FROM"]["AIR_COMPANY"]} and return on {get_formatted_date(flight_data["TO"]["DATE_TIME"])} via {flight_data["TO"]["AIR_COMPANY"]} for <b>{price}£</b>')
+
+            return_html = "10 cheapest return flights in next 3 month:\n==========================\n"
+            return_html = return_html + '\n==========================\n'.join(ar_return_html)
+            return return_html
+        else:
+            return "Unfortunately there are no flights 🥲 \n Maybe you are failed in airport code..."
     else:
-        skipped_countries = []
-
-    # Bus from/to city
-    # adding_price = {'DUB': 10}
-    adding_price = {}
-
-    max_return_price = MAX_RETURN_PRICE
-    month_cnt = MONTH_CNT
-
-    # Get the cheapest flights
-    ob_ac = FlightClass(cities_from, max_return_price, skipped_countries, adding_price, month_cnt, True)
-    cheapest_flights = ob_ac.get_cheapest_flights()
-
-    if cheapest_flights:
-        ar_return_html = []
-        for price in cheapest_flights:
-            flight_data = cheapest_flights[price][0]
-            ar_return_html.append(
-                f'From <b>{flight_data["FROM"]["FROM_TEXT"]}</b> to <b>{flight_data["FROM"]["TO_TEXT"]}</b> at {get_formatted_date(flight_data["FROM"]["DATE_TIME"])} via {flight_data["FROM"]["AIR_COMPANY"]} and return on {get_formatted_date(flight_data["TO"]["DATE_TIME"])} via {flight_data["TO"]["AIR_COMPANY"]} for <b>{price}£</b>')
-
-        return_html = "10 cheapest return flights in next 3 month:\n==========================\n"
-        return_html = return_html + '\n==========================\n'.join(ar_return_html)
-        return return_html
-    else:
-        return "Unfortunately there are no flights 🥲 \n Maybe you are failed in airport code..."
+        return "Something went wrong 😞"
 
 
 def get_last_messages():
@@ -141,24 +161,25 @@ def get_last_messages():
 
                     # if user select flight_command, next message should be with airport codes
                     if chat_id in wait_answer:
-                        for wait_answer_chat_user in wait_answer[chat_id]:
-                            if wait_answer_chat_user == user_id and wait_answer[chat_id][user_id] == flight_command:
-                                del wait_answer[chat_id]
+                        for wait_answer_chat_user in list(wait_answer[chat_id]):
+                            if wait_answer_chat_user == user_id and wait_answer[chat_id][user_id][
+                                "command"] == flight_command:
+                                if "airports" in wait_answer[chat_id][user_id]:
+                                    airports = wait_answer[chat_id][user_id]["airports"]
+                                    trip_range = message["message"]["text"]
 
-                                payload["chat_id"] = chat_id
+                                    # send wait placeholder
+                                    send_message("Wait for a wee minute ⏰", chat_id)
 
-                                # send wait placeholder
-                                payload["text"] = "Wait for a wee minute ⏰"
-                                response = requests.post(url_send_mess, json=payload, headers=headers)
-                                if IS_LOG:
-                                    print_to_file("Send wait placeholder", response.text)
-                                # get flights
-                                send_html = get_flights(message["message"]["text"])
-                                if send_html:
-                                    payload["text"] = send_html
-                                    response = requests.post(url_send_mess, json=payload, headers=headers)
-                                    if IS_LOG:
-                                        print_to_file("Get flights", response.text)
+                                    # get flights
+                                    send_html = get_flights(airports, trip_range)
+                                    if send_html:
+                                        send_message(send_html, chat_id)
+                                        del wait_answer[chat_id][user_id]
+                                else:
+                                    wait_answer[chat_id][user_id]["airports"] = message["message"]["text"]
+                                    send_html = f"Please set trip length in days, format: 2-3, 5-8, etc."
+                                    send_message(send_html, chat_id)
 
                     if command:
                         send_html = None
@@ -167,15 +188,11 @@ def get_last_messages():
                         elif rate_command in command:
                             send_html = get_rate()
                         elif flight_command in command:
-                            wait_answer[chat_id][user_id] = flight_command
+                            wait_answer[chat_id][user_id] = {"command": flight_command}
                             send_html = f"Hi, {message['message']['from']['first_name']}!\nPlease send nearby airport codes separated by comma \",\""
 
                         if send_html:
-                            payload["text"] = send_html
-                            payload["chat_id"] = chat_id
-                            response = requests.post(url_send_mess, json=payload, headers=headers)
-                            if IS_LOG:
-                                print_to_file("Send message", response.text)
+                            send_message(send_html, chat_id)
 
 
 def test():

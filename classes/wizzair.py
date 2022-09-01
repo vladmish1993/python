@@ -18,19 +18,12 @@ class WizzairClass:
         return self.routes
 
     def get_all_flights_from_to_city(self):
+        ar_flights = defaultdict(lambda: defaultdict(list))
+
         # get endpoint
         api_endpoint_src = make_request_get(self.api_endpoint_src)
         ar_data = json.loads(api_endpoint_src)
         api_endpoint = ar_data["apiUrl"]
-
-        # get country for cities
-        cities_country = defaultdict(list)
-        api_endpoint_country = make_request_get(api_endpoint + "/asset/map?languageCode=en-gb")
-        ar_data = json.loads(api_endpoint_country)
-        for city_data in ar_data["cities"]:
-            cities_country[city_data["iata"]] = city_data["countryName"]
-
-        ar_flights = defaultdict(lambda: defaultdict(list))
 
         payloads_list = []
         for from_code in self.routes:
