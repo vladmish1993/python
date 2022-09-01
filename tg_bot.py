@@ -4,6 +4,7 @@ from functions import *
 
 load_dotenv()
 
+# get .env data
 BOT_ID = os.getenv('BOT_ID')
 MAX_RETURN_PRICE = int(os.getenv('MAX_RETURN_PRICE'))
 MONTH_CNT = int(os.getenv('MONTH_CNT'))
@@ -137,6 +138,7 @@ def get_last_messages():
                         if message["message"]["entities"][0]["type"] == "bot_command":
                             command = message["message"]["text"]
 
+                    # if user select flight_command, next message should be with airport codes
                     if chat_id in wait_answer:
                         for wait_answer_chat_user in wait_answer[chat_id]:
                             if wait_answer_chat_user == user_id and wait_answer[chat_id][user_id] == flight_command:
@@ -149,14 +151,13 @@ def get_last_messages():
                                 response = requests.post(url_send_mess, json=payload, headers=headers)
                                 if IS_LOG:
                                     print_to_file("Send wait placeholder", response.text)
-
-                                # get .env data
+                                # get flights
                                 send_html = get_flights(message["message"]["text"])
                                 if send_html:
                                     payload["text"] = send_html
                                     response = requests.post(url_send_mess, json=payload, headers=headers)
                                     if IS_LOG:
-                                        print_to_file("Get .env data", response.text)
+                                        print_to_file("Get flights", response.text)
 
                     if command:
                         send_html = None
