@@ -38,13 +38,13 @@ def get_messages(url):
         if result.status_code == 200:
             ar_data = json.loads(result.text)
             return ar_data
-    except requests.exceptions.RequestException:  # This is the correct syntax
+    except requests.exceptions.RequestException:
         print('requests_error')
 
 
 def get_joke():
     try:
-        result = requests.get("https://v2.jokeapi.dev/joke/Any")
+        result = requests.get("https://v2.jokeapi.dev/joke/Any?safe-mode")
         if result.status_code == 200:
             ar_data = json.loads(result.text)
             html = None
@@ -57,7 +57,7 @@ def get_joke():
                     delivery = ar_data["delivery"]
                     html = f"{setup}\n<tg-spoiler><b>{delivery}</b></tg-spoiler>"
             return html
-    except requests.exceptions.RequestException:  # This is the correct syntax
+    except requests.exceptions.RequestException:
         print('requests_error')
 
 
@@ -73,7 +73,7 @@ def get_rate():
                         rate = rate_data["rate"]
                         html = f"<b>{rate}</b>"
             return html
-    except requests.exceptions.RequestException:  # This is the correct syntax
+    except requests.exceptions.RequestException:
         print('requests_error')
 
 
@@ -91,7 +91,8 @@ def get_flights(airports_str=None):
         skipped_countries = []
 
     # Bus from/to city
-    adding_price = {'DUB': 10}
+    # adding_price = {'DUB': 10}
+    adding_price = {}
 
     max_return_price = MAX_RETURN_PRICE
     month_cnt = MONTH_CNT

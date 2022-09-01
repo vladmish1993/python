@@ -93,7 +93,7 @@ def make_request_get(link):
         if result.status_code == 200:
             json_res = result.text
             return json_res
-    except requests.exceptions.RequestException:  # This is the correct syntax
+    except requests.exceptions.RequestException:
         print('requests_error')
 
 
