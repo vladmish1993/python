@@ -126,7 +126,7 @@ def get_flights(airports_str=None, trip_range_str=None):
                 ar_return_html.append(
                     f'From <b>{flight_data["FROM"]["FROM_TEXT"]}</b> to <b>{flight_data["FROM"]["TO_TEXT"]}</b> at {get_formatted_date(flight_data["FROM"]["DATE_TIME"])} via {flight_data["FROM"]["AIR_COMPANY"]} and return on {get_formatted_date(flight_data["TO"]["DATE_TIME"])} via {flight_data["TO"]["AIR_COMPANY"]} for <b>{price}£</b>')
 
-            return_html = "10 cheapest return flights in next 3 month:\n==========================\n"
+            return_html = f"10 cheapest return flights in next {MONTH_CNT} month:\n==========================\n"
             return_html = return_html + '\n==========================\n'.join(ar_return_html)
             return return_html
         else:
@@ -162,8 +162,7 @@ def get_last_messages():
                     # if user select flight_command, next message should be with airport codes
                     if chat_id in wait_answer:
                         for wait_answer_chat_user in list(wait_answer[chat_id]):
-                            if wait_answer_chat_user == user_id and wait_answer[chat_id][user_id][
-                                "command"] == flight_command:
+                            if wait_answer_chat_user == user_id and wait_answer[chat_id][user_id]["command"] == flight_command:
                                 if "airports" in wait_answer[chat_id][user_id]:
                                     airports = wait_answer[chat_id][user_id]["airports"]
                                     trip_range = message["message"]["text"]
