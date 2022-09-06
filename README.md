@@ -1,4 +1,4 @@
-# My hobby projects
+# My hobby Python projects
 ### sudoku.py 
 Simple sudoku generator.
 ### tg_bot.py 
